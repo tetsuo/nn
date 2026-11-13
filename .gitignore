@@ -1,0 +1,9 @@
+# Build outputs
+*.o
+*.d
+libnn.a
+
+# Editor and OS files
+.DS_Store
+.vscode/
+.idea/
