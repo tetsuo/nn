@@ -27,7 +27,7 @@
 #    define M_PI 3.14159265358979323846
 #endif
 
-void nn_cpu_silu_mul_inplace(float *gate, const float *up, int n) {
+void nn_silu_mul_inplace(float *gate, const float *up, int n) {
 #if defined(__APPLE__) && defined(USE_BLAS)
     enum { CHUNK = 4096 };
     float exp_neg[CHUNK];
@@ -54,13 +54,13 @@ void nn_cpu_silu_mul_inplace(float *gate, const float *up, int n) {
 #endif
 }
 
-void nn_cpu_gelu_inplace(float *x, int n) {
+void nn_gelu_inplace(float *x, int n) {
     /* Exact erf GeLU; 0.70710678... = 1/sqrt(2). */
     for (int i = 0; i < n; i++)
         x[i] = 0.5f * x[i] * (1.0f + erff(x[i] * 0.70710678118654752f));
 }
 
-void nn_cpu_gelu_tanh_inplace(float *x, int n) {
+void nn_gelu_tanh_inplace(float *x, int n) {
     /* Tanh-approximation GeLU; 0.79788456... = sqrt(2/pi). */
     for (int i = 0; i < n; i++) {
         float v = x[i];
@@ -69,7 +69,7 @@ void nn_cpu_gelu_tanh_inplace(float *x, int n) {
     }
 }
 
-void nn_cpu_softmax(float *x, int rows, int cols) {
+void nn_softmax(float *x, int rows, int cols) {
     for (int r = 0; r < rows; r++) {
         float *row = x + r * cols;
         float max_val = row[0];

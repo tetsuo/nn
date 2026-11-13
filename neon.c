@@ -9,7 +9,7 @@
 #    include <arm_neon.h>
 #    include <string.h>
 
-void nn_cpu_bf16_matvec_fused_neon(
+void nn_bf16_matvec_fused_neon(
     float *y, const float *x, const uint16_t *W_bf16, const float *bias, int in_dim, int out_dim) {
     int o = 0;
 

@@ -5,7 +5,7 @@
 /* Mean-subtracting LayerNorm with bias. Safe in place (out may alias x): each
  * row's mean and variance are reduced before the row is rewritten. Scalar for
  * now; LayerNorm is not GEMM-bound, so SIMD/threading is a later perf step. */
-void nn_cpu_layer_norm(float *out,
+void nn_layer_norm(float *out,
                            const float *x,
                            const float *gamma,
                            const float *beta,

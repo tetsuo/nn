@@ -66,13 +66,13 @@ static void rms_norm_worker(int tid, int n_threads, void *arg) {
     rms_norm_range(t->out, t->x, t->weight, start, end, t->hidden, t->eps);
 }
 
-void nn_cpu_rms_norm(
+void nn_rms_norm(
     float *out, const float *x, const float *weight, int seq_len, int hidden, float eps) {
     if (seq_len <= 0 || hidden <= 0)
         return;
 
     long long elems = (long long)seq_len * hidden;
-    if (nn_cpu_num_threads() > 1 && elems >= RMS_NORM_PARALLEL_ELEMS) {
+    if (nn_num_threads() > 1 && elems >= RMS_NORM_PARALLEL_ELEMS) {
         rms_norm_task_t task = {
             .out = out,
             .x = x,
@@ -81,13 +81,13 @@ void nn_cpu_rms_norm(
             .hidden = hidden,
             .eps = eps,
         };
-        nn_cpu_parallel_for(rms_norm_worker, &task);
+        nn_parallel_for(rms_norm_worker, &task);
     } else {
         rms_norm_range(out, x, weight, 0, seq_len, hidden, eps);
     }
 }
 
-void nn_cpu_rms_norm_per_head(
+void nn_rms_norm_per_head(
     float *x, const float *weight, int seq_len, int n_heads, int head_dim, float eps) {
     /* x is [seq, n_heads * head_dim] - normalize each [head_dim] segment */
     int hidden = n_heads * head_dim;

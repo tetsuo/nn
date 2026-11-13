@@ -3,7 +3,7 @@
 #include <math.h>
 #include <string.h>
 
-int nn_cpu_pool_rms(float *out_embeddings,
+int nn_pool_rms(float *out_embeddings,
                         const float *x,
                         const float *norm_weight,
                         const int *offsets,
@@ -55,7 +55,7 @@ int nn_cpu_pool_rms(float *out_embeddings,
                 emb[d] *= inv_len;
         }
 
-        if (normalize && nn_cpu_l2_normalize(emb, hidden) != 0)
+        if (normalize && nn_l2_normalize(emb, hidden) != 0)
             return -1;
     }
     return 0;

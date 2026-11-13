@@ -20,22 +20,22 @@
 
 /* Scalar references (generic.c): the kernel tests compare the SIMD results
  * against these, and the no-SIMD build dispatches to them directly. */
-void nn_cpu_bf16_matvec_fused_generic(
+void nn_bf16_matvec_fused_generic(
     float *y, const float *x, const uint16_t *W_bf16, const float *bias, int in_dim, int out_dim);
-float nn_cpu_dot_f32_generic(const float *a, const float *b, int n);
-void nn_cpu_vec_scale_inplace_generic(float *dst, float scale, int n);
-void nn_cpu_vec_axpy_inplace_generic(float *dst, const float *src, float alpha, int n);
-void nn_cpu_vec_scale_add_generic(float *dst, const float *src, float correction, int n);
+float nn_dot_f32_generic(const float *a, const float *b, int n);
+void nn_vec_scale_inplace_generic(float *dst, float scale, int n);
+void nn_vec_axpy_inplace_generic(float *dst, const float *src, float alpha, int n);
+void nn_vec_scale_add_generic(float *dst, const float *src, float correction, int n);
 
 #ifdef __ARM_NEON
 
 #    include <arm_neon.h>
 
-void nn_cpu_bf16_matvec_fused_neon(
+void nn_bf16_matvec_fused_neon(
     float *y, const float *x, const uint16_t *W_bf16, const float *bias, int in_dim, int out_dim);
-#    define nn_cpu_bf16_matvec_fused_impl nn_cpu_bf16_matvec_fused_neon
+#    define nn_bf16_matvec_fused_impl nn_bf16_matvec_fused_neon
 
-static inline float nn_cpu_dot_f32_impl(const float *a, const float *b, int n) {
+static inline float nn_dot_f32_impl(const float *a, const float *b, int n) {
     int i = 0;
     float32x4_t acc0 = vdupq_n_f32(0.0f);
     float32x4_t acc1 = vdupq_n_f32(0.0f);
@@ -53,7 +53,7 @@ static inline float nn_cpu_dot_f32_impl(const float *a, const float *b, int n) {
     return sum;
 }
 
-static inline void nn_cpu_vec_scale_inplace_impl(float *dst, float scale, int n) {
+static inline void nn_vec_scale_inplace_impl(float *dst, float scale, int n) {
     int i = 0;
     float32x4_t s = vdupq_n_f32(scale);
     for (; i + 8 <= n; i += 8) {
@@ -67,7 +67,7 @@ static inline void nn_cpu_vec_scale_inplace_impl(float *dst, float scale, int n)
 }
 
 static inline void
-nn_cpu_vec_axpy_inplace_impl(float *dst, const float *src, float alpha, int n) {
+nn_vec_axpy_inplace_impl(float *dst, const float *src, float alpha, int n) {
     int i = 0;
     float32x4_t a = vdupq_n_f32(alpha);
     for (; i + 8 <= n; i += 8) {
@@ -83,7 +83,7 @@ nn_cpu_vec_axpy_inplace_impl(float *dst, const float *src, float alpha, int n) {
 }
 
 static inline void
-nn_cpu_vec_scale_add_impl(float *dst, const float *src, float correction, int n) {
+nn_vec_scale_add_impl(float *dst, const float *src, float correction, int n) {
     int i = 0;
     float32x4_t c = vdupq_n_f32(correction);
     for (; i + 8 <= n; i += 8) {
@@ -102,11 +102,11 @@ nn_cpu_vec_scale_add_impl(float *dst, const float *src, float correction, int n)
 
 #    include <immintrin.h>
 
-void nn_cpu_bf16_matvec_fused_avx(
+void nn_bf16_matvec_fused_avx(
     float *y, const float *x, const uint16_t *W_bf16, const float *bias, int in_dim, int out_dim);
-#    define nn_cpu_bf16_matvec_fused_impl nn_cpu_bf16_matvec_fused_avx
+#    define nn_bf16_matvec_fused_impl nn_bf16_matvec_fused_avx
 
-static inline float nn_cpu_dot_f32_impl(const float *a, const float *b, int n) {
+static inline float nn_dot_f32_impl(const float *a, const float *b, int n) {
 #    if defined(__AVX512F__)
     int i = 0;
     __m512 acc0 = _mm512_setzero_ps();
@@ -153,7 +153,7 @@ static inline float nn_cpu_dot_f32_impl(const float *a, const float *b, int n) {
 #    endif
 }
 
-static inline void nn_cpu_vec_scale_inplace_impl(float *dst, float scale, int n) {
+static inline void nn_vec_scale_inplace_impl(float *dst, float scale, int n) {
 #    if defined(__AVX512F__)
     int i = 0;
     __m512 s = _mm512_set1_ps(scale);
@@ -186,7 +186,7 @@ static inline void nn_cpu_vec_scale_inplace_impl(float *dst, float scale, int n)
 }
 
 static inline void
-nn_cpu_vec_axpy_inplace_impl(float *dst, const float *src, float alpha, int n) {
+nn_vec_axpy_inplace_impl(float *dst, const float *src, float alpha, int n) {
 #    if defined(__AVX512F__)
     int i = 0;
     __m512 a = _mm512_set1_ps(alpha);
@@ -229,7 +229,7 @@ nn_cpu_vec_axpy_inplace_impl(float *dst, const float *src, float alpha, int n) {
 }
 
 static inline void
-nn_cpu_vec_scale_add_impl(float *dst, const float *src, float correction, int n) {
+nn_vec_scale_add_impl(float *dst, const float *src, float correction, int n) {
 #    if defined(__AVX512F__)
     int i = 0;
     __m512 c = _mm512_set1_ps(correction);
@@ -273,11 +273,11 @@ nn_cpu_vec_scale_add_impl(float *dst, const float *src, float correction, int n)
 
 #else /* no SIMD path: dispatch to the scalar references */
 
-#    define nn_cpu_bf16_matvec_fused_impl nn_cpu_bf16_matvec_fused_generic
-#    define nn_cpu_dot_f32_impl           nn_cpu_dot_f32_generic
-#    define nn_cpu_vec_scale_inplace_impl nn_cpu_vec_scale_inplace_generic
-#    define nn_cpu_vec_axpy_inplace_impl  nn_cpu_vec_axpy_inplace_generic
-#    define nn_cpu_vec_scale_add_impl     nn_cpu_vec_scale_add_generic
+#    define nn_bf16_matvec_fused_impl nn_bf16_matvec_fused_generic
+#    define nn_dot_f32_impl           nn_dot_f32_generic
+#    define nn_vec_scale_inplace_impl nn_vec_scale_inplace_generic
+#    define nn_vec_axpy_inplace_impl  nn_vec_axpy_inplace_generic
+#    define nn_vec_scale_add_impl     nn_vec_scale_add_generic
 
 #endif
 

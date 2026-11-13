@@ -2,6 +2,7 @@
 *.o
 *.d
 libnn.a
+libnn_mlx.a
 
 # Editor and OS files
 .DS_Store

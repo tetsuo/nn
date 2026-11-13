@@ -31,7 +31,7 @@
 
 /* Position embeddings */
 
-void nn_cpu_compute_rope_neox(
+void nn_compute_rope_neox(
     float *cos_out, float *sin_out, const int *positions, int seq, int head_dim, float theta) {
     int half = head_dim / 2;
 
@@ -51,7 +51,7 @@ void nn_cpu_compute_rope_neox(
     }
 }
 
-void nn_cpu_apply_rope_neox(
+void nn_apply_rope_neox(
     float *x, const float *cos_vals, const float *sin_vals, int seq, int n_heads, int head_dim) {
     /*
      * NeoX split-half style:

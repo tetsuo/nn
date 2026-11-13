@@ -3,7 +3,7 @@
 #include <float.h>
 #include <stdlib.h>
 
-float nn_cpu_maxsim(
+float nn_maxsim(
     const float *query_vectors, int query_tokens, const float *doc_vectors, int doc_tokens, int dim) {
     if (!query_vectors || !doc_vectors || query_tokens <= 0 || doc_tokens <= 0 || dim <= 0)
         return 0.0f;
@@ -16,7 +16,7 @@ float nn_cpu_maxsim(
         float best = -FLT_MAX;
         for (int di = 0; di < doc_tokens; di++) {
             const float *d = doc_vectors + (size_t)di * dim;
-            float dot = nn_cpu_dot_f32_impl(q, d, dim);
+            float dot = nn_dot_f32_impl(q, d, dim);
             if (dot > best)
                 best = dot;
         }
@@ -25,7 +25,7 @@ float nn_cpu_maxsim(
     return (float)score;
 }
 
-int nn_cpu_maxsim_batch(const float *query_vectors,
+int nn_maxsim_batch(const float *query_vectors,
                             int query_tokens,
                             const float *doc_vectors,
                             const int *doc_offsets,
@@ -69,7 +69,7 @@ int nn_cpu_maxsim_batch(const float *query_vectors,
                 doc++;
             int group_tokens = doc_offsets[doc] - start;
 
-            nn_cpu_matmul_t(sim, query_vectors, doc_vectors + (size_t)start * dim, query_tokens,
+            nn_matmul_t(sim, query_vectors, doc_vectors + (size_t)start * dim, query_tokens,
                                 dim, group_tokens);
 
             for (int i = first; i < doc; i++) {
@@ -96,7 +96,7 @@ int nn_cpu_maxsim_batch(const float *query_vectors,
     for (int i = 0; i < docs; i++) {
         int start = doc_offsets[i];
         int end = doc_offsets[i + 1];
-        scores[i] = nn_cpu_maxsim(query_vectors, query_tokens, doc_vectors + (size_t)start * dim,
+        scores[i] = nn_maxsim(query_vectors, query_tokens, doc_vectors + (size_t)start * dim,
                                       end - start, dim);
     }
     return 0;

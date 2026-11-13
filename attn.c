@@ -23,27 +23,27 @@
 
 /* Attention operations */
 
-float nn_cpu_dot_f32(const float *a, const float *b, int n) {
-    return nn_cpu_dot_f32_impl(a, b, n);
+float nn_dot_f32(const float *a, const float *b, int n) {
+    return nn_dot_f32_impl(a, b, n);
 }
 
 static inline float dot_f32_fast(const float *a, const float *b, int n) {
-    return nn_cpu_dot_f32_impl(a, b, n);
+    return nn_dot_f32_impl(a, b, n);
 }
 
 /* dst = dst * scale */
 static inline void vec_scale_inplace(float *dst, float scale, int n) {
-    nn_cpu_vec_scale_inplace_impl(dst, scale, n);
+    nn_vec_scale_inplace_impl(dst, scale, n);
 }
 
 /* dst += alpha * src */
 static inline void vec_axpy_inplace(float *dst, const float *src, float alpha, int n) {
-    nn_cpu_vec_axpy_inplace_impl(dst, src, alpha, n);
+    nn_vec_axpy_inplace_impl(dst, src, alpha, n);
 }
 
 /* dst = dst * correction + src */
 static inline void vec_scale_add(float *dst, const float *src, float correction, int n) {
-    nn_cpu_vec_scale_add_impl(dst, src, correction, n);
+    nn_vec_scale_add_impl(dst, src, correction, n);
 }
 
 #define PACKED_ATTN_QUERY_TILE   32
@@ -130,7 +130,7 @@ static void bidirectional_gqa_attention_packed_blas_rows(float *out,
 
     cblas_sgemm(CblasRowMajor, CblasNoTrans, CblasTrans, rows, keys, head_dim, scale, q, q_hidden, k,
                 kv_hidden, 0.0f, scores, keys);
-    nn_cpu_softmax(scores, rows, keys);
+    nn_softmax(scores, rows, keys);
     cblas_sgemm(CblasRowMajor, CblasNoTrans, CblasNoTrans, rows, head_dim, keys, 1.0f, scores, keys,
                 v, kv_hidden, 0.0f, o, q_hidden);
 }
@@ -183,7 +183,7 @@ static void packed_gqa_attn_worker(int tid, int n_threads, void *arg) {
     }
 }
 
-size_t nn_cpu_bidirectional_gqa_attention_packed_scratch_bytes(const int *offsets, int batch) {
+size_t nn_bidirectional_gqa_attention_packed_scratch_bytes(const int *offsets, int batch) {
 #ifdef USE_BLAS
     if (!offsets || batch <= 0)
         return 0;
@@ -197,9 +197,9 @@ size_t nn_cpu_bidirectional_gqa_attention_packed_scratch_bytes(const int *offset
     if (max_seq < PACKED_ATTN_BLAS_MIN_SEQ)
         return 0;
     if ((size_t)max_seq >
-        SIZE_MAX / (sizeof(float) * PACKED_ATTN_QUERY_TILE * (size_t)nn_cpu_num_threads()))
+        SIZE_MAX / (sizeof(float) * PACKED_ATTN_QUERY_TILE * (size_t)nn_num_threads()))
         return 0;
-    return (size_t)nn_cpu_num_threads() * PACKED_ATTN_QUERY_TILE * (size_t)max_seq *
+    return (size_t)nn_num_threads() * PACKED_ATTN_QUERY_TILE * (size_t)max_seq *
            sizeof(float);
 #else
     (void)offsets;
@@ -208,7 +208,7 @@ size_t nn_cpu_bidirectional_gqa_attention_packed_scratch_bytes(const int *offset
 #endif
 }
 
-void nn_cpu_bidirectional_gqa_attention_packed_with_scratch(float *out,
+void nn_bidirectional_gqa_attention_packed_with_scratch(float *out,
                                                                 const float *Q,
                                                                 const float *K,
                                                                 const float *V,
@@ -231,7 +231,7 @@ void nn_cpu_bidirectional_gqa_attention_packed_with_scratch(float *out,
 
     float *scores = NULL;
 #ifdef USE_BLAS
-    size_t required = nn_cpu_bidirectional_gqa_attention_packed_scratch_bytes(offsets, batch);
+    size_t required = nn_bidirectional_gqa_attention_packed_scratch_bytes(offsets, batch);
     if (required != 0 && scratch && scratch_bytes >= required)
         scores = scratch;
 #else
@@ -250,14 +250,14 @@ void nn_cpu_bidirectional_gqa_attention_packed_with_scratch(float *out,
                                    .scale = scale,
                                    .scores = scores,
                                    .max_seq = max_seq};
-    if (nn_cpu_num_threads() > 1 && n_heads >= 2 && qk_work >= 4096) {
-        nn_cpu_parallel_for(packed_gqa_attn_worker, &task);
+    if (nn_num_threads() > 1 && n_heads >= 2 && qk_work >= 4096) {
+        nn_parallel_for(packed_gqa_attn_worker, &task);
     } else {
         packed_gqa_attn_worker(0, 1, &task);
     }
 }
 
-void nn_cpu_bidirectional_gqa_attention_packed(float *out,
+void nn_bidirectional_gqa_attention_packed(float *out,
                                                    const float *Q,
                                                    const float *K,
                                                    const float *V,
@@ -268,9 +268,9 @@ void nn_cpu_bidirectional_gqa_attention_packed(float *out,
                                                    int head_dim,
                                                    float scale) {
     size_t scratch_bytes =
-        nn_cpu_bidirectional_gqa_attention_packed_scratch_bytes(offsets, batch);
+        nn_bidirectional_gqa_attention_packed_scratch_bytes(offsets, batch);
     float *scores = scratch_bytes ? malloc(scratch_bytes) : NULL;
-    nn_cpu_bidirectional_gqa_attention_packed_with_scratch(
+    nn_bidirectional_gqa_attention_packed_with_scratch(
         out, Q, K, V, offsets, batch, n_heads, n_kv_heads, head_dim, scale, scores, scratch_bytes);
     free(scores);
 }
@@ -357,7 +357,7 @@ static void causal_gqa_attention_packed_blas_rows(float *out,
         for (int j = allowed; j < keys; j++)
             row[j] = -INFINITY;
     }
-    nn_cpu_softmax(scores, rows, keys);
+    nn_softmax(scores, rows, keys);
     cblas_sgemm(CblasRowMajor, CblasNoTrans, CblasNoTrans, rows, head_dim, keys, 1.0f, scores, keys,
                 v, kv_hidden, 0.0f, o, q_hidden);
 }
@@ -396,7 +396,7 @@ static void packed_causal_gqa_attn_worker(int tid, int n_threads, void *arg) {
     }
 }
 
-void nn_cpu_causal_gqa_attention_packed_with_scratch(float *out,
+void nn_causal_gqa_attention_packed_with_scratch(float *out,
                                                          const float *Q,
                                                          const float *K,
                                                          const float *V,
@@ -419,7 +419,7 @@ void nn_cpu_causal_gqa_attention_packed_with_scratch(float *out,
 
     float *scores = NULL;
 #ifdef USE_BLAS
-    size_t required = nn_cpu_bidirectional_gqa_attention_packed_scratch_bytes(offsets, batch);
+    size_t required = nn_bidirectional_gqa_attention_packed_scratch_bytes(offsets, batch);
     if (required != 0 && scratch && scratch_bytes >= required)
         scores = scratch;
 #else
@@ -438,13 +438,13 @@ void nn_cpu_causal_gqa_attention_packed_with_scratch(float *out,
                                    .scale = scale,
                                    .scores = scores,
                                    .max_seq = max_seq};
-    if (nn_cpu_num_threads() > 1 && n_heads >= 2 && qk_work >= 4096)
-        nn_cpu_parallel_for(packed_causal_gqa_attn_worker, &task);
+    if (nn_num_threads() > 1 && n_heads >= 2 && qk_work >= 4096)
+        nn_parallel_for(packed_causal_gqa_attn_worker, &task);
     else
         packed_causal_gqa_attn_worker(0, 1, &task);
 }
 
-void nn_cpu_causal_gqa_attention_packed(float *out,
+void nn_causal_gqa_attention_packed(float *out,
                                             const float *Q,
                                             const float *K,
                                             const float *V,
@@ -455,9 +455,9 @@ void nn_cpu_causal_gqa_attention_packed(float *out,
                                             int head_dim,
                                             float scale) {
     size_t scratch_bytes =
-        nn_cpu_bidirectional_gqa_attention_packed_scratch_bytes(offsets, batch);
+        nn_bidirectional_gqa_attention_packed_scratch_bytes(offsets, batch);
     float *scores = scratch_bytes ? malloc(scratch_bytes) : NULL;
-    nn_cpu_causal_gqa_attention_packed_with_scratch(
+    nn_causal_gqa_attention_packed_with_scratch(
         out, Q, K, V, offsets, batch, n_heads, n_kv_heads, head_dim, scale, scores, scratch_bytes);
     free(scores);
 }

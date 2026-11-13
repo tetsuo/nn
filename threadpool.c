@@ -35,7 +35,7 @@ static struct {
     int n_threads;
     int shutdown;
 
-    nn_cpu_parallel_fn_t fn;
+    nn_parallel_fn_t fn;
     void *arg;
     uint64_t generation;
 
@@ -65,7 +65,7 @@ static void *worker_loop(void *arg) {
             return NULL;
         }
         my_gen = tp.generation;
-        nn_cpu_parallel_fn_t fn = tp.fn;
+        nn_parallel_fn_t fn = tp.fn;
         void *a = tp.arg;
         int nt = tp.n_threads;
         pthread_mutex_unlock(&tp.mutex);
@@ -79,7 +79,7 @@ static void *worker_loop(void *arg) {
     }
 }
 
-void nn_cpu_set_threads(int n) {
+void nn_set_threads(int n) {
     if (n < 1)
         n = 1;
     if (n > TP_MAX_THREADS)
@@ -163,7 +163,7 @@ static int cgroup_cpu_quota(void) {
 }
 #endif
 
-int nn_cpu_count(void) {
+int nn_count(void) {
 #ifdef __APPLE__
     int n = 0;
     size_t len = sizeof(n);
@@ -191,10 +191,10 @@ int nn_cpu_count(void) {
 #endif
 }
 
-int nn_cpu_num_threads(void) { return tp.n_threads; }
+int nn_num_threads(void) { return tp.n_threads; }
 
 /* Dispatch work to all threads; main thread is tid=0 */
-void nn_cpu_parallel_for(nn_cpu_parallel_fn_t fn, void *arg) {
+void nn_parallel_for(nn_parallel_fn_t fn, void *arg) {
     if (tp.n_threads <= 1) {
         fn(0, 1, arg);
         return;

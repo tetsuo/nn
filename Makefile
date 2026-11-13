@@ -23,20 +23,32 @@ SRCS := \
 	threadpool.c \
 	vec.c
 OBJS := $(SRCS:.c=.o)
-DEPS := $(OBJS:.o=.d)
+
+MLX_SRCS := mlx_act.c mlx_attention.c mlx_gdn.c mlx_linear.c mlx_matmul.c mlx_norm.c
+MLX_OBJS := $(MLX_SRCS:.c=.o)
+MLXC_PREFIX ?= $(shell brew --prefix mlx-c 2>/dev/null)
+
+DEPS := $(OBJS:.o=.d) $(MLX_OBJS:.o=.d)
 
 CPPFLAGS += -I.
 CFLAGS ?= -O3 -std=c11
 CFLAGS += -fPIC
 
-.PHONY: all libnn clean
+.PHONY: all libnn gpu clean
 
 all: libnn
 
 libnn: $(TARGET)
 
+gpu: libnn_mlx.a
+
 $(TARGET): $(OBJS)
 	$(AR) $(ARFLAGS) $@ $^
+
+libnn_mlx.a: $(MLX_OBJS)
+	$(AR) $(ARFLAGS) $@ $^
+
+$(MLX_OBJS): CPPFLAGS += -DUSE_GPU -I$(MLXC_PREFIX)/include
 
 %.o: %.c
 	$(CC) $(CPPFLAGS) $(CFLAGS) -MMD -MP -c $< -o $@
@@ -44,4 +56,4 @@ $(TARGET): $(OBJS)
 -include $(DEPS)
 
 clean:
-	$(RM) $(OBJS) $(DEPS) $(TARGET)
+	$(RM) $(OBJS) $(MLX_OBJS) $(DEPS) $(TARGET) libnn_mlx.a

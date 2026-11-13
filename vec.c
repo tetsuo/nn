@@ -4,7 +4,7 @@
 
 /* Vector helpers */
 
-int nn_cpu_l2_normalize(float *vec, int dim) {
+int nn_l2_normalize(float *vec, int dim) {
     if (!vec || dim <= 0)
         return -1;
 

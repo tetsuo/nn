@@ -3,7 +3,7 @@
 
 #include "nn.h"
 
-typedef void (*nn_cpu_parallel_fn_t)(int tid, int n_threads, void *arg);
-void nn_cpu_parallel_for(nn_cpu_parallel_fn_t fn, void *arg);
+typedef void (*nn_parallel_fn_t)(int tid, int n_threads, void *arg);
+void nn_parallel_for(nn_parallel_fn_t fn, void *arg);
 
 #endif

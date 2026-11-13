@@ -36,14 +36,14 @@
 
 /* Basic element-wise operations */
 
-void nn_cpu_add_inplace(float *a, const float *b, int n) {
+void nn_add_inplace(float *a, const float *b, int n) {
     for (int i = 0; i < n; i++)
         a[i] += b[i];
 }
 
 /* Matrix operations */
 
-void nn_cpu_matmul_t(float *C, const float *A, const float *B, int M, int K, int N) {
+void nn_matmul_t(float *C, const float *A, const float *B, int M, int K, int N) {
 #ifdef USE_BLAS
     cblas_sgemm(CblasRowMajor, CblasNoTrans, CblasTrans, M, N, K, 1.0f, A, K, B, K, 0.0f, C, N);
 #else
@@ -59,7 +59,7 @@ void nn_cpu_matmul_t(float *C, const float *A, const float *B, int M, int K, int
 #endif
 }
 
-void nn_cpu_linear(
+void nn_linear(
     float *y, const float *x, const float *W, const float *b, int seq_len, int in_dim, int out_dim) {
 #ifdef USE_BLAS
     if (seq_len == 1) {
@@ -91,13 +91,13 @@ void nn_cpu_linear(
 #endif
 }
 
-void nn_cpu_linear_nobias(
+void nn_linear_nobias(
     float *y, const float *x, const float *W, int seq_len, int in_dim, int out_dim) {
-    nn_cpu_linear(y, x, W, NULL, seq_len, in_dim, out_dim);
+    nn_linear(y, x, W, NULL, seq_len, in_dim, out_dim);
 }
 
 /* Convert bf16 buffer to f32 buffer */
-void nn_cpu_bf16_to_f32_buf(float *dst, const uint16_t *src, size_t n) {
+void nn_bf16_to_f32_buf(float *dst, const uint16_t *src, size_t n) {
 #if defined(__ARM_NEON) || defined(__ARM_NEON__)
     size_t i = 0;
     uint32_t *d = (uint32_t *)(void *)dst;
@@ -123,7 +123,7 @@ void nn_cpu_bf16_to_f32_buf(float *dst, const uint16_t *src, size_t n) {
  */
 static void bf16_matvec_fused(
     float *y, const float *x, const uint16_t *W_bf16, const float *bias, int in_dim, int out_dim) {
-    nn_cpu_bf16_matvec_fused_impl(y, x, W_bf16, bias, in_dim, out_dim);
+    nn_bf16_matvec_fused_impl(y, x, W_bf16, bias, in_dim, out_dim);
 }
 
 /* Threaded matvec: split output rows across threads */
@@ -152,12 +152,12 @@ static void matvec_worker(int tid, int n_threads, void *arg) {
 
 static void bf16_matvec_threaded(
     float *y, const float *x, const uint16_t *W_bf16, const float *bias, int in_dim, int out_dim) {
-    if (nn_cpu_num_threads() <= 1) {
+    if (nn_num_threads() <= 1) {
         bf16_matvec_fused(y, x, W_bf16, bias, in_dim, out_dim);
         return;
     }
     matvec_task_t task = {y, x, W_bf16, bias, in_dim, out_dim};
-    nn_cpu_parallel_for(matvec_worker, &task);
+    nn_parallel_for(matvec_worker, &task);
 }
 
 typedef struct {
@@ -203,8 +203,8 @@ static void bf16_linear_rows(float *y,
         .out_dim = out_dim,
     };
 
-    if (nn_cpu_num_threads() > 1 && seq_len >= 2)
-        nn_cpu_parallel_for(bf16_linear_rows_worker, &task);
+    if (nn_num_threads() > 1 && seq_len >= 2)
+        nn_parallel_for(bf16_linear_rows_worker, &task);
     else
         bf16_linear_rows_worker(0, 1, &task);
 }
@@ -268,7 +268,7 @@ static void pair_matvec_worker(int tid, int n_threads, void *arg) {
     }
 }
 
-void nn_cpu_linear_nobias_bf16_pair(float *a,
+void nn_linear_nobias_bf16_pair(float *a,
                                         float *b,
                                         const float *x,
                                         const uint16_t *Wa_bf16,
@@ -280,7 +280,7 @@ void nn_cpu_linear_nobias_bf16_pair(float *a,
     if (seq_len <= 0)
         return;
 
-    if (nn_cpu_num_threads() <= 1) {
+    if (nn_num_threads() <= 1) {
         for (int s = 0; s < seq_len; s++) {
             const float *x_row = x + (size_t)s * in_dim;
             bf16_matvec_fused(a + (size_t)s * a_dim, x_row, Wa_bf16, NULL, in_dim, a_dim);
@@ -301,7 +301,7 @@ void nn_cpu_linear_nobias_bf16_pair(float *a,
         .b_dim = b_dim,
         .total_dim = a_dim + b_dim,
     };
-    nn_cpu_parallel_for(pair_matvec_worker, &task);
+    nn_parallel_for(pair_matvec_worker, &task);
 }
 
 typedef struct {
@@ -376,7 +376,7 @@ static void qkv_matvec_worker(int tid, int n_threads, void *arg) {
     }
 }
 
-void nn_cpu_linear_nobias_bf16_qkv(float *q,
+void nn_linear_nobias_bf16_qkv(float *q,
                                        float *k,
                                        float *v,
                                        const float *x,
@@ -390,7 +390,7 @@ void nn_cpu_linear_nobias_bf16_qkv(float *q,
     if (seq_len <= 0)
         return;
 
-    if (nn_cpu_num_threads() <= 1) {
+    if (nn_num_threads() <= 1) {
         for (int s = 0; s < seq_len; s++) {
             const float *x_row = x + (size_t)s * in_dim;
             bf16_matvec_fused(q + (size_t)s * q_dim, x_row, Wq_bf16, NULL, in_dim, q_dim);
@@ -414,10 +414,10 @@ void nn_cpu_linear_nobias_bf16_qkv(float *q,
         .seq_len = seq_len,
         .total_dim = q_dim + 2 * kv_dim,
     };
-    nn_cpu_parallel_for(qkv_matvec_worker, &task);
+    nn_parallel_for(qkv_matvec_worker, &task);
 }
 
-void nn_cpu_linear_nobias_bf16(
+void nn_linear_nobias_bf16(
     float *y, const float *x, const uint16_t *W_bf16, int seq_len, int in_dim, int out_dim) {
     if (seq_len == 1) {
         bf16_matvec_threaded(y, x, W_bf16, NULL, in_dim, out_dim);

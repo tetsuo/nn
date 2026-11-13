@@ -22,7 +22,7 @@
 
 #    if defined(__AVX512F__) && defined(__AVX512BW__)
 
-void nn_cpu_bf16_matvec_fused_avx(
+void nn_bf16_matvec_fused_avx(
     float *y, const float *x, const uint16_t *W_bf16, const float *bias, int in_dim, int out_dim) {
     int o = 0;
 
@@ -201,7 +201,7 @@ static inline void bf16x16_to_f32(const uint16_t *src, __m256 *lo, __m256 *hi) {
     *hi = bf16x8_to_f32(_mm256_extracti128_si256(raw, 1));
 }
 
-void nn_cpu_bf16_matvec_fused_avx(
+void nn_bf16_matvec_fused_avx(
     float *y, const float *x, const uint16_t *W_bf16, const float *bias, int in_dim, int out_dim) {
     int o = 0;
 

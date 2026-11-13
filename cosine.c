@@ -2,7 +2,7 @@
 
 #include <math.h>
 
-float nn_cpu_cosine_similarity(const float *a, const float *b, int dim) {
+float nn_cosine_similarity(const float *a, const float *b, int dim) {
     if (!a || !b || dim <= 0)
         return 0.0f;
 
