@@ -2,11 +2,32 @@
 
 `libnn` is a C library of low-level neural network inference kernels for implementing transformer architectures and embedding models. It supports CPU execution and GPU acceleration via MLX on Apple silicon.
 
-## Build and use
+## Build
 
-Run `make` from the repository root to build `libnn.a`. The default CPU build requires a C11 compiler and `make`.
+From the repository root, build the CPU library with a C11 compiler and CMake 3.23 or newer:
 
-Include [`nn.h`](nn.h) in your program. For example, save this as `demo.c`:
+```sh
+cmake -S . -B build/cpu -DCMAKE_BUILD_TYPE=Release
+cmake --build build/cpu
+```
+
+This produces `build/cpu/libnn.a`. The default build uses Accelerate on macOS or OpenBLAS on Linux. To build without BLAS, add `-DNN_USE_BLAS=OFF` to the configure command.
+
+### Optional GPU build
+
+On Apple silicon, you can include both CPU and GPU kernels in `libnn.a`. With [MLX C](https://github.com/ml-explore/mlx-c) installed through Homebrew:
+
+```sh
+cmake -S . -B build/mlx -DCMAKE_BUILD_TYPE=Release \
+  -DNN_MLX=ON -DCMAKE_PREFIX_PATH="$(brew --prefix mlx-c)"
+cmake --build build/mlx
+```
+
+For an MLX-only build, add `-DNN_CPU=OFF` to the configure command.
+
+## Using the CPU API
+
+With `NN_CPU=ON`, link `nn::nn` and include [`nn.h`](nn.h). This program prints `32`:
 
 ```c
 #include <stdio.h>
@@ -18,21 +39,4 @@ int main(void) {
     printf("%g\n", nn_dot_f32(a, b, 3));
     return 0;
 }
-```
-
-```sh
-cc -I. demo.c libnn.a -lm -pthread -o demo
-./demo  # prints 32
-```
-
-## Optional GPU build
-
-On Apple silicon with [MLX C](https://github.com/ml-explore/mlx-c) installed, `make gpu` builds the `libnn_mlx.a` archive.
-
-The Makefile looks for Homebrew's `mlx-c` by default; set `MLXC_PREFIX` to use another installation.  GPU programs include [`nn_mlx.h`](nn_mlx.h) and link against `libnn_mlx.a` and MLX C.
-
-```sh
-MLXC_PREFIX=$(brew --prefix mlx-c)
-cc -I. -I"$MLXC_PREFIX/include" demo.c libnn_mlx.a \
-    -L"$MLXC_PREFIX/lib" -lmlxc -lm -pthread -o demo
 ```
