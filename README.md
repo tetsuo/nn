@@ -1,6 +1,6 @@
 # nn
 
-`libnn` is a C library of low-level neural network inference kernels for implementing transformer architectures and embedding models. It supports CPU execution and GPU acceleration via MLX on Apple silicon.
+`nn` provides neural network inference primitives in C, with SIMD kernels for x86 and Arm CPUs and optional MLX kernels for Apple silicon GPUs.
 
 ## Build
 
