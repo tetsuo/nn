@@ -1,6 +1,6 @@
-# libnn
+# nn
 
-`libnn` is a C library of low-level neural network inference kernels. It provides matrix multiplication, linear layers, normalization, activations, and causal and bidirectional attention. It supports CPU execution and GPU acceleration via MLX on Apple silicon.
+`libnn` is a C library of low-level neural network inference kernels for implementing transformer architectures and embedding models. It supports CPU execution and GPU acceleration via MLX on Apple silicon.
 
 ## Build and use
 
@@ -27,7 +27,9 @@ cc -I. demo.c libnn.a -lm -pthread -o demo
 
 ## Optional GPU build
 
-On Apple silicon with [MLX C](https://github.com/ml-explore/mlx-c) installed, `make gpu` builds the `libnn_mlx.a` archive. The Makefile looks for Homebrew's `mlx-c` by default; set `MLXC_PREFIX` to use another installation.  GPU programs include [`nn_mlx.h`](nn_mlx.h) and link against `libnn_mlx.a` and MLX C.
+On Apple silicon with [MLX C](https://github.com/ml-explore/mlx-c) installed, `make gpu` builds the `libnn_mlx.a` archive.
+
+The Makefile looks for Homebrew's `mlx-c` by default; set `MLXC_PREFIX` to use another installation.  GPU programs include [`nn_mlx.h`](nn_mlx.h) and link against `libnn_mlx.a` and MLX C.
 
 ```sh
 MLXC_PREFIX=$(brew --prefix mlx-c)
